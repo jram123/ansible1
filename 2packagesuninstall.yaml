@@ -1,0 +1,16 @@
+---
+ - hosts: group1
+   become: true
+   tasks:
+     - name: stopping service
+       service: name="{{item}}" state=stopped 
+       with_items:
+         - httpd
+         - firewalld
+
+     - name: uninstalling packages
+       yum: name="{{item}}" state=absent
+       with_items:
+         - httpd
+         - firewalld
+
