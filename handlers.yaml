@@ -1,0 +1,35 @@
+---
+ - hosts: group1
+   become: true
+   tasks:
+
+     - name: "installing lamp packages"
+       yum: name={{item}} state=present disable_gpg_check=yes
+       with_items:
+         - httpd
+         - php
+         - mariadb
+         - mariadb-server
+       register: pkg_log
+
+     - name: "httpd pkg validation"
+       command: httpd -v
+       register: httpd_validation
+       when: pkg_log|success
+
+     - name: "copying index file"
+       copy: src=/home/ansadmin/ansible1/ansible1/index.html dest=/var/www/html/index.html
+       when: httpd_validation|success
+       notify:
+        - Restart_httpd
+
+     - name: "updating httpd conf"
+       lineinfile: dest=/etc/httpd/conf/httpd.conf state=present regexp="^Listen" line="Listen 8080"
+       when: httpd_validation|success
+       notify:
+        - Restart_httpd
+
+   handlers:
+     - name: "Restart_httpd"
+       service: name=httpd state=restarted
+        
