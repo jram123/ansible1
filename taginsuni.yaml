@@ -1,0 +1,35 @@
+---
+ - hosts: group1
+   become: true
+   tasks:
+
+     - name: "installing package"
+       yum: name={{item}} state=present 
+       with_items:
+         - httpd
+       tags:
+          - packages_install
+          
+     - name: "copying config file"
+       copy: src=/home/ansadmin/index.html dest=/var/www/html/index.html
+       tags:
+          - copy_config
+     
+     - name: "starting service"
+       yum: name=httpd state=started
+       
+     - name: "stopping  a service"
+       yum: name={{item}} state=stopped
+       with_items:
+         - httpd
+       tags:
+         - stopping_service
+  
+     - name: "removing config file"
+       file: dest=/var/www/html/index.html  state=absent
+       tags:
+         - remove_config
+        
+     - name: "uninstalling package"
+       yum: name={{item}} state=absent
+       
