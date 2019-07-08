@@ -1,0 +1,10 @@
+---
+ - hosts: group1
+   become: true
+   vars_files:
+    - userpar.yaml
+ 
+   tasks:
+     - name: Creating a user
+       user: name={{user_name}} password={{user_password|password_hash('sha512')}} shell=/bin/bash
+
