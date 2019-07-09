@@ -11,25 +11,33 @@
           - packages_install
           
      - name: "copying config file"
-       copy: src=/home/ansadmin/index.html dest=/var/www/html/index.html
+       copy: src=/home/ansadmin/ansible1/index.html dest=/var/www/html/index.html
        tags:
-          - copy_config
+          - packages_install
      
      - name: "starting service"
-       yum: name=httpd state=started
-       
-     - name: "stopping  a service"
-       yum: name={{item}} state=stopped
+       service: name={{item}} state=started
        with_items:
          - httpd
        tags:
-         - stopping_service
+         - packages_install
+       
+     - name: "stopping  a service"
+       service: name={{item}} state=stopped
+       with_items:
+         - httpd
+       tags:
+         - packages_uninstall
   
      - name: "removing config file"
        file: dest=/var/www/html/index.html  state=absent
        tags:
-         - remove_config
+         - packages_uninstall
         
      - name: "uninstalling package"
        yum: name={{item}} state=absent
+       with_items:
+         - httpd
+       tags:
+         - packages_uninstall
        
