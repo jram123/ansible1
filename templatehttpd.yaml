@@ -1,0 +1,20 @@
+---
+ - hosts: group1
+   become: true
+   vars:
+     - http_port: 8080
+   tasks:
+
+     - name: "installing httpd packages"
+       yum: name={{item}} state=present disable_gpg_check=yes
+       with_items:
+         - httpd
+       register: pkg_log
+
+     - name: "updating httpd conf"
+       template: src=/var/tmp/httpd.conf.j2  dest=/etc/httpd/conf/httpd.conf
+       notify:
+         - Restart_httpd
+   handlers:
+     - name: "Restart_httpd"
+       service: name=httpd state=restarted 
