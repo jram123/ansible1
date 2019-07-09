@@ -1,0 +1,22 @@
+---
+ - hosts: all
+   become: true
+   tasks:
+     - name: "copying a file"
+       copy: src=/home/ansadmin/ram.html dest=/var/www/html/ram.html
+
+ - hosts: group1 
+   become: true
+   tasks:      
+     - name: "copying a file"
+       copy: src=/home/ansadmin/ram.html dest=/var/www/html/ram.html
+       tags:
+         - copy_group1
+
+ - hosts: group2
+   become: true
+   tasks:
+     - name: "copying a file"
+       copy: src=/home/ansadmin/ram.html dest=/var/www/html/ram.html
+       tags:
+         - copy_group2
