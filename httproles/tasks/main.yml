@@ -1,0 +1,21 @@
+---
+# tasks file for httproles
+
+     - name: "installing package"
+       yum: name={{item}} state=present 
+       with_items:
+         - httpd
+       tags:
+          - packages_install
+          
+     - name: "copying config file"
+       copy: src=/home/ansadmin/ansible1/index.html dest=/var/www/html/index.html
+       tags:
+          - packages_install
+     
+     - name: "starting service"
+       service: name={{item}} state=started
+       with_items:
+         - httpd
+       tags:
+         - packages_install
