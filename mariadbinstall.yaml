@@ -1,0 +1,48 @@
+---
+ - hosts: group1
+   become: true
+   tasks:
+     
+     - name: "copying mariadb repo "
+       copy: src=/home/ansadmin/ansible1/mariadb.repo dest=/etc/yum.repos.d/
+     
+     - name: "installing the mariadb package"
+       yum: name={{item}}  state=present
+       with_items:
+          - mariadb-server
+          - mariadb
+          - MySQL-python 
+    
+     - name: "starting and enbaling service"
+       service: name=mariadb  state=started enabled=yes
+
+     - name: "secure installation to Set the root password"
+#       mysql_user: login_user=root login_password="{{ mysql_root_password }}" name=root  password={{ mysql_root_password }}  state=present
+       mysql_user: user=root password=root  state=present host={{ item }}
+#become: true
+       with_items:
+         - group1
+         
+
+     - name: Add my.cnf
+       template: src=my.cnf.j2  dest=/root/my.cnf  owner=root group=root mode=0600
+
+     - name: Reload privilege tables
+       command: 'mysql -ne "{{ item }}"'
+       with_items:
+         - FLUSH PRIVILEGES 
+       changed_when: False
+    
+     - name: Remove anonymous users
+       command: 'mysql -ne "{{ item }}"'
+       with_items:
+          - DELETE FROM mysql.user WHERE User=''
+       changed_when: False  
+
+     - name: Remove test database and access to it
+       command: 'mysql -ne "{{ item }}"'
+       with_items:
+          - DROP DATABASE IF EXISTS test
+          - DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%'
+       changed_when: False
+
