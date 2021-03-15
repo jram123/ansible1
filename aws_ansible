@@ -1,0 +1,132 @@
+---
+ - name: Playbook for vpc and ec2 creation 
+   hosts: localhost
+   connection: local
+   become: yes
+   gather_facts: true
+   vars_files:
+     - secrets.yaml
+     aws_secret_key: "{{ secret_key }}"
+     aws_access_key: "{{ access_key }}"
+     vpc_title: 'ANS'
+     vpc_name: "{{ vpc_title }} VPC"
+     igw_name: "{{ vpc_title }} IGW"
+     subnet_name: "{{ vpc_title }} Subnet1"
+     acl_name: "{{ vpc_title }} ACL"
+     security_group_name: "{{ vpc_title }} Security Group"
+     route_table_name: "{{ vpc_title }} route table"
+     vpcCidrBlock: '10.0.0.0/16'
+     subNetCidrBlock: '10.0.1.0/24'
+     port22CidrBlock: '0.0.0.0/0'
+     destinationCidrBlock: '0.0.0.0/0'
+     state: 'present'
+     zone: 'ap-south-1b'
+     region: 'ap-south-1'
+    tasks:
+    - name: create a new ec2 vpc
+      ec2_vpc_net:
+       aws_access_key: "{{ access_key }}"
+       aws_secret_key: "{{ secret_key }}"
+       name: "{{ vpc_name }}" 
+       cidr_block: "{{ vpcCidrBlock }}"
+       region: "{{ region }}"
+       # enable dns support 
+       dns_support: yes
+       # enable dns hostnames
+       dns_hostnames: yes
+       tenancy: default
+       state: "{{ state }}"
+      register: ec2_vpc_net_result
+      
+    - name: Create ec2 vpc intenet gateway
+    # create an internet gateway for the vpc
+      ec2_vpc_igw:
+       aws_access_key: "{{ access_key }}"
+       aws_secret_key: "{{ secret_key }}"
+       vpc_id: "{{ ec2_vpc_net_result.vpc.id }}"
+       region: "{{ region }}"
+       state: "{{ state }}" 
+       tags:
+        Name: "{{ igw_name }}"
+      register: igw_result
+      
+    - name: create ec2 vpc subnet1
+      ec2_vpc_subnet:
+       aws_access_key: "{{ access_key }}"
+       aws_secret_key: "{{ secret_key }}"
+       vpc_id: "{{ ec2_vpc_net_result.vpc.id }}"
+       region: "{{ region }}"
+       az: "{{ zone }}"      # az is the availability zone
+       state: "{{ state }}"
+       cidr: "{{ subNetCidrBlock }}"
+       map_public: yes
+       resource_tags:
+         Name: "{{ subnet_name }}"
+      register: subnet_result1
+    - name: create ec2 vpc subnet2
+      ec2_vpc_subnet:
+       aws_access_key: "{{ access_key }}"
+       aws_secret_key: "{{ secret_key }}"
+       vpc_id: "{{ ec2_vpc_net_result.vpc.id }}"
+       region: "{{ region }}"
+       az: ap-south-1a      # az is the availability zone
+       state: "{{ state }}"
+       cidr: '10.0.2.0/24'
+       map_public: yes
+       resource_tags:
+         Name: "ANS Subnet2"
+      register: subnet_result2
+    - name: create ec2 security group
+      ec2_group:
+       aws_access_key: "{{ access_key }}"
+       aws_secret_key: "{{ secret_key }}"
+       vpc_id: "{{ ec2_vpc_net_result.vpc.id }}"
+       region: "{{ region }}"
+       state: "{{ state }}"
+       name: "{{ security_group_name }}"
+       description: "{{ security_group_name }}"
+       tags:
+         Name: "{{ security_group_name  }}"
+       rules:
+        - proto: tcp
+          ports:
+           - 22
+           - 80
+           - 443
+          cidr_ip: "{{ port22CidrBlock }}"
+          rule_desc: allow all on port 22
+      register: security_group_results
+    - name: create ec2 VPC public subnet1 route table
+      ec2_vpc_route_table:
+       aws_access_key: "{{ aws_access_key }}"
+       aws_secret_key: "{{ aws_secret_key }}"
+       vpc_id: "{{ ec2_vpc_net_result.vpc.id }}"
+       region: "{{ region }}"
+       state: "{{ state }}"
+       tags:
+         Name: "{{ route_table_name }}"
+       subnets: [ "{{ subnet_result1.subnet.id }}" ]
+       routes:
+        - dest: "{{ destinationCidrBlock }}" 
+          gateway_id: "{{ igw_result.gateway_id }}"
+      register: public_route_table1
+      
+    - name: create ec2 VPC public subnet1 route table
+      ec2_vpc_route_table:
+       aws_access_key: "{{ aws_access_key }}"
+       aws_secret_key: "{{ aws_secret_key }}"
+       vpc_id: "{{ ec2_vpc_net_result.vpc.id }}"
+       region: "{{ region }}"
+       state: "{{ state }}"
+       tags:
+         Name: "{{ route_table_name }}"
+       subnets: [ "{{ subnet_result2.subnet.id }}" ]
+       routes:
+        - dest: "{{ destinationCidrBlock }}" 
+          gateway_id: "{{ igw_result.gateway_id }}"
+      register: public_route_table2
+      
+    - name: save subnetid
+      shell: echo "{{ subnet_result1.subnet.id }}" > /tmp/subnet1.yml
+    - name: save subnetid
+      shell: echo "{{ subnet_result2.subnet.id }}" > /tmp/subnet2.yml
