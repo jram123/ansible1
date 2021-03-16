@@ -1,0 +1,47 @@
+---
+ - name: playbook for launching ec2 instance
+   hosts: localhost
+   connection: local
+   #become: yes
+   #become_user: root
+   gather_facts: true
+   tasks:
+    - name: provision Ec2
+      block:
+       - name: Ansible module for launching ec2 instance
+         ec2:
+          instance_type: t3.micro
+          image: ami-0eeb03e72075b9bcc
+          region: ap-south-1
+          aws_access_key: 
+          aws_secret_key: 
+          group: default
+          count: 1
+          vpc_subnet_id: "subnet-17cc776c"
+          keypair: ec2-imss
+          wait: yes
+          assign_public_ip: yes
+         register: ec2
+       - name: Associate new elastic ip
+         ec2_eip:
+          region: ap-south-1
+          aws_access_key: 
+          aws_secret_key: 
+          instance_id: "{{ ec2.instance_ids[0] }}"
+          ip: 65.1.150.186
+         register: instance_eip
+       - name: Wait for SSH to come up
+         local_action: wait_for
+                       host=65.1.150.186
+                       state=started
+                       port=22
+       #delegate_to: "65.1.150.186"
+       #wait_for_connection:
+         #delay: 90
+         #timeout: 120
+       #loop: "{{ ec2.instances }}"
+       - name: "Provisioning success - updating JIRA"
+         include_tasks: Jira_JAI.yml
+      rescue:
+       - name: "Provisioning failure - updating Jira"
+         include_tasks: Jira_JAI_failed.yml
